@@ -1,9 +1,16 @@
 const express = require('express')
+const morgan = require('morgan')
 const app = express()
 const PORT = 3001
 const date = new Date()
 
 app.use(express.json())
+
+app.use(morgan('tiny'))
+
+morgan.token('body', (request) => JSON.stringify(request.body))
+app.use(morgan(':method :url :status : response-time ms - :res[content-length] :body'))
+
 
 let persons = [
     {
@@ -67,7 +74,7 @@ app.post('/api/persons', (request, response) => {
 
     // using the built in some() array method to test => if at least one element passes the test implemented in the arrow function and return true
     const nameExist = persons.some(person => person.name === body.name)
-    if(nameExist){
+    if (nameExist) {
         return response.status(400).json({
             error: 'name must be unique'
         })
@@ -90,7 +97,6 @@ app.delete('/api/persons/:id', (request, response) => {
 
     response.status(204).end()
 })
-
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
