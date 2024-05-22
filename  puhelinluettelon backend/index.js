@@ -2,7 +2,6 @@ require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
-const mongoose = require('mongoose')
 const Person = require('./models/person')
 
 const app = express()
@@ -17,10 +16,7 @@ app.use(morgan('tiny'))
 morgan.token('body', (request) => JSON.stringify(request.body))
 app.use(morgan(':method :url :status : response-time ms - :res[content-length] :body'))
 
-app.get('/', (request, response) => {
-    response.send('<h1>Puhelinluettelo Backend!</h1>')
-})
-
+// Routes
 app.get('/info', (request, response) => {
     Person.countDocuments({}).then(count => {
         response.send(`<p>Phonebook have entry for ${count} people <br/> ${date}</p>`)
@@ -33,14 +29,14 @@ app.get('/api/persons', (request, response) => {
     })
 })
 
-app.get('/api/persons/:id', (request, response) => {
+app.get('/api/persons/:id', (request, response, next) => {
     Person.findById(request.params.id).then(person => {
         if (person) {
             response.json(person)
         } else {
             response.status(404).end()
         }
-    })
+    }).catch(error => next(error))
 })
 
 app.post('/api/persons', (request, response) => {
@@ -70,7 +66,7 @@ app.post('/api/persons', (request, response) => {
     })
 })
 
-app.delete('/api/persons/:id', (request, response) => {
+app.delete('/api/persons/:id', (request, response, next) => {
     const id = request.params.id
     Person.findByIdAndDelete(id).then(deletedPerson => {
         if (deletedPerson) {
@@ -78,11 +74,28 @@ app.delete('/api/persons/:id', (request, response) => {
         } else {
             response.status(404).end()
         }
-    }).catch(error => {
-        console.error(error)
-        response.status(400).send({ error: 'malformatted id' })
-    })
+    }).catch(error => next(error))
 })
+
+// Unknown Endpoint Middleware
+const unknownEndpoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint' })
+}
+
+app.use(unknownEndpoint)
+
+// Error Handler Middlware
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformatted id' })
+    }
+
+    next(error)
+}
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT, () => {
