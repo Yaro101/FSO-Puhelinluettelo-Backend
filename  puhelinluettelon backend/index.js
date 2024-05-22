@@ -62,8 +62,31 @@ app.post('/api/persons', (request, response) => {
 
         person.save().then(savedPerson => {
             response.json(savedPerson)
-        })
+        }).catch(error => response.status(500).json({ error: 'Database error' }))
     })
+})
+
+app.put('/api/persons/:id', (request, response, next) => {
+
+    const body = request.body
+
+    if (!body.name || !body.number) {
+        return response.status(400).json({ error: 'Name or Number missing' })
+    }
+
+    const person = {
+        name: body.name,
+        number: body.number,
+    }
+
+    Person.findByIdAndUpdate(request.params.id, person, { new: true, runValidators: true, context: 'query' })
+        .then(updatedPerson => {
+            if (updatedPerson) {
+                response.json(updatedPerson)
+            } else {
+                response.status(404).end()
+            }
+        }).catch(error => next(error))
 })
 
 app.delete('/api/persons/:id', (request, response, next) => {
