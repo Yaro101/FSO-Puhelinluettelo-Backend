@@ -18,28 +18,32 @@ app.use(morgan(':method :url :status : response-time ms - :res[content-length] :
 
 // Routes
 app.get('/info', (request, response) => {
-    Person.countDocuments({}).then(count => {
-        response.send(`<p>Phonebook have entry for ${count} people <br/> ${date}</p>`)
-    })
+    Person.countDocuments({})
+        .then(count => {
+            response.send(`<p>Phonebook have entry for ${count} people <br/> ${date}</p>`)
+        })
 })
 
 app.get('/api/persons', (request, response) => {
-    Person.find({}).then(persons => {
-        response.json(persons)
-    })
+    Person.find({})
+        .then(persons => {
+            response.json(persons)
+        })
 })
 
 app.get('/api/persons/:id', (request, response, next) => {
-    Person.findById(request.params.id).then(person => {
-        if (person) {
-            response.json(person)
-        } else {
-            response.status(404).end()
-        }
-    }).catch(error => next(error))
+    Person.findById(request.params.id)
+        .then(person => {
+            if (person) {
+                response.json(person)
+            } else {
+                response.status(404).end()
+            }
+        })
+        .catch(error => next(error))
 })
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
     const body = request.body
 
     if (!body.name || !body.number) {
@@ -48,28 +52,20 @@ app.post('/api/persons', (request, response) => {
         })
     }
 
-    // using the built in findOne to return true or false
-    Person.findOne({ name: body.name }).then(nameExist => {
-        if (nameExist) {
-            return response.status(400).json({
-                error: 'name must be unique'
-            })
-        }
-        const person = new Person({
-            name: body.name,
-            number: body.number,
-        })
-
-        person.save().then(savedPerson => {
-            response.json(savedPerson)
-        }).catch(error => response.status(500).json({ error: 'Database error' }))
+    const person = new Person({
+        name: body.name,
+        number: body.number,
     })
+
+    person.save()
+        .then(savedPerson => {
+            response.json(savedPerson)
+        })
+        .catch(error => next(error))
 })
 
 app.put('/api/persons/:id', (request, response, next) => {
-
     const body = request.body
-
     if (!body.name || !body.number) {
         return response.status(400).json({ error: 'Name or Number missing' })
     }
@@ -86,18 +82,21 @@ app.put('/api/persons/:id', (request, response, next) => {
             } else {
                 response.status(404).end()
             }
-        }).catch(error => next(error))
+        })
+        .catch(error => next(error))
 })
 
 app.delete('/api/persons/:id', (request, response, next) => {
     const id = request.params.id
-    Person.findByIdAndDelete(id).then(deletedPerson => {
-        if (deletedPerson) {
-            response.status(204).end()
-        } else {
-            response.status(404).end()
-        }
-    }).catch(error => next(error))
+    Person.findByIdAndDelete(id)
+        .then(deletedPerson => {
+            if (deletedPerson) {
+                response.status(204).end()
+            } else {
+                response.status(404).end()
+            }
+        })
+        .catch(error => next(error))
 })
 
 // Unknown Endpoint Middleware
@@ -113,6 +112,8 @@ const errorHandler = (error, request, response, next) => {
 
     if (error.name === 'CastError') {
         return response.status(400).send({ error: 'malformatted id' })
+    } else if (error.name === 'ValidationError') {
+        return response.status(400).json({ error: error.message })
     }
 
     next(error)
