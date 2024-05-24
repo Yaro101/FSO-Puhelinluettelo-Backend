@@ -5,7 +5,7 @@ if (process.argv.length < 3) {
     process.exit(1);
 }
 
-const password = process.argv[2];
+// const password = process.argv[2];
 
 const url = process.env.MONGODB_URL
 
@@ -39,7 +39,7 @@ if (process.argv.length === 3) {
         number: number,
     });
 
-    person.save().then(result => {
+    person.save().then(() => {
         console.log(`Added ${name} ${number} to phonebook`);
         mongoose.connection.close();
     }).catch(err => {
